@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Weather App Project JavaScript | CodingNepal</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script defer>
+      document.addEventListener("DOMContentLoaded", function() {
+        const apiKey = "r9loqGq9ptaWIHXUQdna1Zzxmauxa1jt"; // Replace with your actual API key
+        const searchBtn = document.querySelector(".search-btn");
+        const cityInput = document.querySelector(".city-input");
+        const weatherDataDiv = document.querySelector(".weather-data");
+
+        searchBtn.addEventListener("click", function() {
+          const city = cityInput.value.trim();
+          if (city) {
+            getWeather(city);
+          }
+        });
+
+        function getWeather(city) {
+          const url = `https://dataservice.accuweather.com/locations/v1/cities/search?apikey=${apiKey}&q=${city}`;
+
+          fetch(url)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              if (data && data.length > 0) {
+                const locationKey = data[0].Key;
+                fetchWeatherData(locationKey);
+                fetch5DayForecast(locationKey);
+              } else {
+                weatherDataDiv.innerHTML = "<p>City not found.</p>";
+              }
+            })
+            .catch(error => {
+              console.error('Error fetching location data:', error);
+              weatherDataDiv.innerHTML = "<p>Error fetching location data. Please try again later.</p>";
+            });
+        }
+
+        function fetchWeatherData(locationKey) {
+          const url = `https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}`;
+
+          fetch(url)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              if (data && data.length > 0) {
+                const temperature = data[0].Temperature.Metric.Value;
+                const weather = data[0].WeatherText;
+                const icon = data[0].WeatherIcon;
+                displayWeather(temperature, weather, icon);
+              } else {
+                weatherDataDiv.innerHTML = "<p>No weather data available.</p>";
+              }
+            })
+            .catch(error => {
+              console.error('Error fetching weather data:', error);
+              weatherDataDiv.innerHTML = "<p>Error fetching weather data. Please try again later.</p>";
+            });
+
+          // Set interval to refresh weather every 1 hour (3600000 milliseconds)
+          setInterval(function() {
+            fetchWeatherData(locationKey);
+          }, 3600000); // 3600000 milliseconds = 1 hour
+        }
+
+        function fetch5DayForecast(locationKey) {
+          const url = `https://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}`;
+
+          fetch(url)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              if (data && data.DailyForecasts) {
+                display5DayForecast(data.DailyForecasts);
+              } else {
+                weatherDataDiv.innerHTML += "<p>No 5-day forecast data available.</p>";
+              }
+            })
+            .catch(error => {
+              console.error('Error fetching 5-day forecast data:', error);
+              weatherDataDiv.innerHTML += "<p>Error fetching 5-day forecast data. Please try again later.</p>";
+            });
+        }
+
+        function displayWeather(temperature, weather, icon) {
+          const weatherContent = `
+            <h2>Current Weather</h2>
+            <p>Temperature: ${temperature}°C</p>
+            <p>Weather: ${weather}</p>
+            <img src="https://developer.accuweather.com/sites/default/files/${icon < 10 ? '0' + icon : icon}-s.png" alt="${weather}">
+          `;
+          weatherDataDiv.innerHTML = weatherContent;
+        }
+
+        function display5DayForecast(forecasts) {
+          let forecastContent = `<h2>5-Day Forecast</h2><ul class="weather-cards">`;
+          forecasts.forEach(forecast => {
+            const date = new Date(forecast.Date).toLocaleDateString();
+            const minTemp = forecast.Temperature.Minimum.Value;
+            const maxTemp = forecast.Temperature.Maximum.Value;
+            const dayWeather = forecast.Day.IconPhrase;
+            const dayIcon = forecast.Day.Icon;
+            const nightWeather = forecast.Night.IconPhrase;
+            const nightIcon = forecast.Night.Icon;
+
+            forecastContent += `
+              <li class="card">
+                <h3>${date}</h3>
+                <img src="https://developer.accuweather.com/sites/default/files/${dayIcon < 10 ? '0' + dayIcon : dayIcon}-s.png" alt="${dayWeather}">
+                <h6>Morning</h6>
+                <h6>Min: ${minTemp}°C</h6>
+                <h6>Max: ${maxTemp}°C</h6>
+                <h6>Weather: ${dayWeather}</h6>
+                <img src="https://developer.accuweather.com/sites/default/files/${nightIcon < 10 ? '0' + nightIcon : nightIcon}-s.png" alt="${nightWeather}">
+                <h6>Evening</h6>
+                <h6>Weather: ${nightWeather}</h6>
+              </li>
+            `;
+          });
+          forecastContent += `</ul>`;
+          weatherDataDiv.innerHTML += forecastContent;
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <h1>Weather Dashboard</h1>
+    <div class="container">
+      <div class="weather-input">
+        <h3>Enter a City Name</h3>
+        <input class="city-input" type="text" placeholder="E.g., New York, London, Tokyo">
+        <button class="search-btn">Search</button>
+      </div>
+      <div class="weather-data">
+        <!-- Weather data will be displayed here -->
+      </div>
+    </div>
+  </body>
+</html>
